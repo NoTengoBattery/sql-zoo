@@ -267,3 +267,168 @@ SELECT mdate, team1,
   FROM game JOIN goal ON id = matchid
  GROUP BY mdate, team1, team2
  ORDER BY mdate, matchid, team1, team2
+
+-- https://sqlzoo.net/wiki/More_JOIN_operations
+-- 1.
+SELECT id, title
+  FROM movie
+ WHERE yr=1962
+-- 2.
+SELECT yr FROM movie
+ WHERE title = 'Citizen Kane'
+-- 3.
+SELECT id, title, yr FROM movie
+ WHERE title LIKE '%star%trek%'
+ ORDER BY yr
+-- 4.
+SELECT id FROM actor
+ WHERE name = 'Glenn Close'
+-- 5.
+SELECT id FROM movie
+ WHERE title = 'Casablanca'
+-- 6.
+SELECT name
+  FROM actor JOIN casting ON actorid = id
+ WHERE movieid = 11768
+-- 7.
+SELECT name
+  FROM actor
+  JOIN casting ON actorid = actor.id
+  JOIN movie ON movieid = movie.id
+ WHERE title = 'Alien'
+-- 8.
+SELECT title
+  FROM actor
+  JOIN casting ON actorid = actor.id
+  JOIN movie ON movieid = movie.id
+ WHERE name = 'Harrison Ford'
+-- 9.
+SELECT title
+  FROM actor
+  JOIN casting ON actorid = actor.id
+  JOIN movie ON movieid = movie.id
+ WHERE name = 'Harrison Ford' AND ord <> 1
+-- 10.
+SELECT title, name
+  FROM actor
+  JOIN casting ON actorid = actor.id
+  JOIN movie ON movieid = movie.id
+ WHERE yr = 1962 AND ord = 1
+-- 11.
+SELECT yr,COUNT(title)
+  FROM movie
+  JOIN casting ON actorid = actor.id
+  JOIN movie ON movieid = movie.id
+ WHERE name = 'Rock Hudson'
+ GROUP BY yr
+ HAVING COUNT(title) > 2
+ -- 12.
+SELECT DISTINCT e.title,
+  (SELECT a.name
+    FROM actor a
+    JOIN casting b ON b.actorid = a.id
+   WHERE b.movieid = e.id AND b.ord = 1) AS 'leading actor'
+  FROM actor c
+  JOIN casting d ON d.actorid = c.id
+  JOIN movie e ON movieid = e.id
+ WHERE name = 'Julie Andrews'
+-- 13.
+SELECT name
+  FROM actor
+  JOIN casting ON actorid = actor.id
+ WHERE ord = 1
+ GROUP BY name
+ HAVING COUNT(movieid) >= 15
+-- 14.
+SELECT title, COUNT(actorid)
+  FROM movie
+  JOIN casting ON movieid = movie.id
+ WHERE yr = 1978
+ GROUP BY title
+ ORDER BY COUNT(actorid) DESC, title
+-- 15.
+SELECT a.name
+  FROM actor a
+  JOIN casting b ON a.id = b.actorid
+ WHERE b.movieid IN (SELECT movieid
+  FROM casting c
+  JOIN actor d ON c.actorid = d.id
+  JOIN movie e ON c.movieid = e.id
+ WHERE d.name = 'Art Garfunkel')
+AND a.name <> 'Art Garfunkel'
+
+-- https://sqlzoo.net/wiki/Using_Null
+-- 1.
+SELECT name FROM teacher
+ WHERE dept IS NULL
+-- 2.
+SELECT teacher.name, dept.name
+  FROM teacher INNER JOIN dept ON (teacher.dept=dept.id)
+-- 3.
+SELECT teacher.name, dept.name
+  FROM teacher LEFT JOIN dept ON (teacher.dept=dept.id)
+-- 4.
+SELECT teacher.name, dept.name
+  FROM teacher RIGHT JOIN dept ON (teacher.dept=dept.id)
+-- 5.
+SELECT name, COALESCE(mobile, '07986 444 2266') FROM teacher
+-- 6.
+SELECT teacher.name, COALESCE(dept.name, 'None')
+  FROM teacher LEFT JOIN dept ON (teacher.dept=dept.id)
+-- 7.
+SELECT COUNT(id), COUNT(mobile) FROM teacher
+-- 8.
+SELECT dept.name, COUNT(teacher.id)
+  FROM teacher RIGHT JOIN dept ON (teacher.dept=dept.id)
+ GROUP BY dept.name
+-- 9.
+SELECT name, CASE WHEN dept = 1 OR dept = 2 THEN 'Sci' ELSE 'Art' END FROM teacher
+-- 10.
+SELECT name, CASE WHEN dept = 1 OR dept = 2 THEN 'Sci' WHEN dept = 3 THEN 'Art' ELSE 'None' END FROM teacher
+
+-- https://sqlzoo.net/wiki/Self_join
+-- 1.
+SELECT COUNT(id) FROM stops
+-- 2.
+SELECT id FROM stops WHERE name = 'Craiglockhart'
+-- 3.
+SELECT a.id, a.name
+  FROM stops a
+  JOIN route b ON a.id = b.stop
+ WHERE b.company = 'LRT' AND b.num = 4
+ ORDER BY b.pos
+-- 4.
+SELECT company, num, COUNT(*)
+  FROM route WHERE stop = 149 OR stop = 53
+ GROUP BY company, num
+ HAVING COUNT(*) > 1
+-- 5.
+SELECT a.company, a.num, a.stop, b.stop
+  FROM route a JOIN route b ON a.company = b.company AND a.num = b.num
+ WHERE a.stop = 53 AND b.stop = 149
+-- 6.
+SELECT a.company, a.num, stopa.name, stopb.name
+  FROM route a JOIN route b ON a.company = b.company AND a.num = b.num
+  JOIN stops stopa ON a.stop = stopa.id
+  JOIN stops stopb ON b.stop = stopb.id
+ WHERE stopa.name='Craiglockhart' AND stopb.name='London Road'
+-- 7.
+SELECT DISTINCT a.company, a.num
+  FROM route a JOIN route b ON a.num = b.num
+ WHERE (a.stop = 115 OR b.stop = 115) AND (a.stop = 137 OR b.stop = 137)
+-- 8.
+SELECT DISTINCT a.company, a.num
+  FROM route a JOIN route b ON a.num = b.num
+ WHERE (a.stop = 53 OR b.stop = 53) AND (a.stop = 230 OR b.stop = 230)
+-- 9.
+SELECT DISTINCT b.name, a.company, a.num
+  FROM route a
+  JOIN stops b ON b.id = a.stop
+ WHERE a.company = 'LRT' AND a.num IN (SELECT z.num FROM route z JOIN stops y ON y.id = z.stop WHERE z.stop = 53)
+-- 10.
+SELECT a.num, a.company, e.name, b.num, b.company
+  FROM route a
+  JOIN route b ON a.stop = b.stop AND a.num <> b.num
+  JOIN route c ON c.stop = 53 AND a.num = c.num AND a.company = c.company
+  JOIN route d ON d.stop = 147 AND b.num = d.num AND b.company = d.company
+  JOIN stops e ON a.stop = e.id OR b.stop = e.id
